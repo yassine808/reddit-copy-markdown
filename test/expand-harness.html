@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>expand.js harness</title>
+    <style>
+      body { font: 13px/1.5 system-ui, sans-serif; margin: 24px; }
+      #out { white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace; }
+      .pass { color: #0a7d33; }
+      .fail { color: #b00020; }
+    </style>
+  </head>
+  <body>
+    <h1>expand.js harness</h1>
+    <p>Simulates a lazy-loading thread: two inline "more replies" rounds, one
+      "continue this thread" link that must never be clicked.</p>
+    <pre id="out">running…</pre>
+
+    <shreddit-comment-tree id="tree" style="position: absolute; left: -10000px; top: 0; width: 600px">
+      <shreddit-comment>comment 1</shreddit-comment>
+      <shreddit-comment>comment 2</shreddit-comment>
+      <button id="more" type="button">2 more replies</button>
+      <a id="nav" href="#somewhere-else">continue this thread</a>
+    </shreddit-comment-tree>
+
+    <script src="../expand.js"></script>
+    <script>
+      const tree = document.getElementById("tree");
+      const more = document.getElementById("more");
+      const nav = document.getElementById("nav");
+      let clicked = 0;
+      let navigated = false;
+
+      function addComment() {
+        const el = document.createElement("shreddit-comment");
+        el.textContent = "comment " + (tree.querySelectorAll("shreddit-comment").length + 1);
+        tree.appendChild(el);
+      }
+
+      more.addEventListener("click", () => {
+        clicked += 1;
+        addComment();
+        addComment();
+        more.remove();
+
+        // A second, deeper loader appears after the first batch.
+        const again = document.createElement("button");
+        again.type = "button";
+        again.textContent = "1 more reply";
+        again.addEventListener("click", () => {
+          clicked += 1;
+          addComment();
+          again.remove();
+        });
+        tree.appendChild(again);
+      });
+
+      nav.addEventListener("click", () => {
+        navigated = true;
+      });
+
+      (async () => {
+        const started = Date.now();
+        const result = await window.RedditExpand.expandAll();
+        const comments = tree.querySelectorAll("shreddit-comment").length;
+
+        const checks = [
+          ["all loaders clicked (2)", result.clicked === 2],
+          ["all 5 comments materialised", comments === 5],
+          ["continue-this-thread untouched", navigated === false],
+          ["deep branch reported", result.skipped === 1],
+          ["returned before the deadline", Date.now() - started < 60000],
+        ];
+
+        const failed = checks.filter(([, ok]) => !ok);
+        document.getElementById("out").innerHTML =
+          checks.map(([name, ok]) => (ok ? "PASS " : "FAIL ") + name).join("\n") +
+          "\n\nraw: " + JSON.stringify({ result, comments, navigated }) +
+          "\n" + (failed.length ? "FAILED: " + failed.length : "ALL CHECKS PASSED");
+
+        document.title = failed.length ? "HARNESS FAIL " + failed.length : "HARNESS PASS";
+        window.__harness = { checks, result, comments, navigated };
+      })();
+    </script>
+  </body>
+</html>

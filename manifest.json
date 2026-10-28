@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Reddit to Markdown",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Copy the current Reddit thread (post + comment tree) to the clipboard as clean Markdown.",
   "permissions": [
     "activeTab",
@@ -48,6 +48,7 @@
       "js": [
         "vendor/turndown.js",
         "vendor/turndown-plugin-gfm.js",
+        "expand.js",
         "extract-old.js",
         "extract-new.js",
         "content.js"

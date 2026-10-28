@@ -139,8 +139,17 @@
   /* ----------------------------------------------------------- comments ---- */
 
   function extractComments(options) {
-    const maxDepth = Number.isFinite(options.maxDepth) ? options.maxDepth : 5;
-    const maxComments = Number.isFinite(options.maxComments) ? options.maxComments : 200;
+    const unlimited = options.unlimited === true;
+    const maxDepth = unlimited
+      ? Infinity
+      : Number.isFinite(options.maxDepth)
+        ? options.maxDepth
+        : 5;
+    const maxComments = unlimited
+      ? Infinity
+      : Number.isFinite(options.maxComments)
+        ? options.maxComments
+        : 200;
 
     const comments = [];
     for (const node of document.querySelectorAll(SELECTORS.comments)) {

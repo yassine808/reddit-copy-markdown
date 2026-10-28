@@ -53,7 +53,7 @@
 
   /** depth 0 -> ">", depth 1 -> "> >", ... i.e. depth + 1 markers, always. */
   function commentBlock(comment, includeScores) {
-    const depth = Math.max(0, Math.min(20, comment.depth | 0));
+    const depth = Math.max(0, Math.min(64, comment.depth | 0));
     const marker = "> ".repeat(depth + 1).trimEnd();
     const header =
       "**" + comment.author + "**" +
@@ -119,6 +119,10 @@
     }
   }
 
+  /* --------------------------------------------------------- expansion ---- */
+  /* The load-more sweep lives in expand.js (window.RedditExpand) so it can be
+     tested against a synthetic thread without the rest of the extension. */
+
   /* --------------------------------------------------------------- toast ---- */
 
   let toastTimer = null;
@@ -129,30 +133,68 @@
       if (existing) existing.remove();
       if (toastTimer) clearTimeout(toastTimer);
 
+      const error = kind === "error";
+      const accent = error ? "#ff6b6b" : "#ff4500";
+
       const el = document.createElement("div");
       el.id = TOAST_ID;
-      el.textContent = message;
       el.setAttribute("role", "status");
       el.style.cssText = [
         "position:fixed",
-        "top:16px",
-        "right:16px",
+        "top:18px",
+        "right:18px",
         "z-index:2147483647",
-        "max-width:320px",
-        "padding:10px 14px",
-        "border-radius:8px",
-        "background:#1a1a1b",
-        "color:#f2f2f2",
-        "font:500 13px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
-        "box-shadow:0 6px 24px rgba(0,0,0,.45)",
-        "border-left:3px solid " + (kind === "error" ? "#ff585b" : "#ff4500"),
+        "display:flex",
+        "align-items:center",
+        "gap:10px",
+        "max-width:340px",
+        "padding:10px 14px 10px 11px",
+        "border-radius:12px",
+        "background:rgba(22,23,25,.97)",
+        "border:1px solid rgba(255,255,255,.09)",
+        "box-shadow:0 16px 40px -16px rgba(0,0,0,.85),0 2px 8px rgba(0,0,0,.4)",
+        "backdrop-filter:blur(10px)",
+        "color:#f2f2f3",
+        "font:500 12.5px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
         "pointer-events:none",
-        "transition:opacity .15s ease",
+        "opacity:0",
+        "transform:translateY(-8px) scale(.98)",
+        "transition:opacity .18s ease,transform .18s ease",
       ].join(";");
 
+      const badge = document.createElement("span");
+      badge.textContent = error ? "!" : "\u2713";
+      badge.style.cssText = [
+        "flex:0 0 auto",
+        "display:grid",
+        "place-items:center",
+        "width:20px",
+        "height:20px",
+        "border-radius:50%",
+        "font:700 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+        "color:#fff",
+        "background:" + accent,
+        "box-shadow:0 0 12px " +
+          (error ? "rgba(255,107,107,.5)" : "rgba(255,69,0,.5)"),
+      ].join(";");
+
+      const text = document.createElement("span");
+      text.textContent = message;
+      text.style.cssText = "min-width:0;";
+
+      el.appendChild(badge);
+      el.appendChild(text);
       (document.body || document.documentElement).appendChild(el);
+
+      requestAnimationFrame(() => {
+        el.style.opacity = "1";
+        el.style.transform = "translateY(0) scale(1)";
+      });
+
       toastTimer = setTimeout(() => {
-        el.remove();
+        el.style.opacity = "0";
+        el.style.transform = "translateY(-6px) scale(.98)";
+        setTimeout(() => el.remove(), 200);
         toastTimer = null;
       }, TOAST_MS);
     } catch (err) {
@@ -176,7 +218,7 @@
     return null;
   }
 
-  async function copyThread() {
+  async function copyThread(copyEverything) {
     const extractor = pickExtractor();
     if (!extractor) {
       const reason = "This page is not a Reddit thread.";
@@ -184,7 +226,26 @@
       return { ok: false, error: reason };
     }
 
-    const options = await getOptions();
+    let options = await getOptions();
+    let skippedBranches = 0;
+
+    // "Copy everything" ignores every limit and always keeps comments + scores.
+    if (copyEverything === true) {
+      options = Object.assign({}, options, {
+        unlimited: true,
+        includeComments: true,
+        includeScores: true,
+        maxDepth: Infinity,
+        maxComments: Infinity,
+      });
+
+      // Reddit only renders a batch of comments at a time: expand the whole
+      // tree before extracting, otherwise "everything" means "what is on screen".
+      toast("Expanding every comment…", "success");
+      const expander = window.RedditExpand;
+      const expansion = expander ? await expander.expandAll() : { clicked: 0, skipped: 0 };
+      skippedBranches = expansion && expansion.skipped ? expansion.skipped : 0;
+    }
 
     let data;
     try {
@@ -219,8 +280,14 @@
 
     const count = (data.comments || []).length;
     const message =
-      "Copied " + markdown.length.toLocaleString() + " chars" +
-      (options.includeComments !== false ? " · " + count + " comment" + (count === 1 ? "" : "s") : "");
+      (copyEverything === true ? "Copied everything" : "Copied") +
+      " · " + markdown.length.toLocaleString() + " chars" +
+      (options.includeComments !== false
+        ? " · " + count + " comment" + (count === 1 ? "" : "s")
+        : "") +
+      (skippedBranches
+        ? " · " + skippedBranches + " deep branch" + (skippedBranches === 1 ? "" : "es") + " skipped"
+        : "");
     toast(message, "success");
     return { ok: true, message: message, chars: markdown.length, comments: count };
   }
@@ -230,7 +297,7 @@
   try {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!message || message.type !== "COPY_THREAD") return undefined;
-      copyThread()
+      copyThread(message.all === true)
         .then(sendResponse)
         .catch((err) => sendResponse({ ok: false, error: String(err) }));
       return true; // keep the channel open for the async response

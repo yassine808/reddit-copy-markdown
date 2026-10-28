@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -6,34 +6,83 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <header>
-      <h1>Reddit <span aria-hidden="true">→</span> Markdown</h1>
+    <div class="glow" aria-hidden="true"></div>
+
+    <header class="hero">
+      <img class="logo" src="icons/48.png" alt="" width="38" height="38" />
+      <div class="hero-text">
+        <h1>Reddit <span class="arrow">&rarr;</span> Markdown</h1>
+        <p>Thread &amp; comments, clipboard-ready</p>
+      </div>
     </header>
 
-    <button id="copy" class="primary" type="button">Copy this thread</button>
-    <p id="status" class="status" role="status" aria-live="polite">Ready.</p>
+    <button id="copy" class="primary" type="button">
+      <span class="primary-label">Copy thread</span>
+      <span class="primary-sub">post + comments within your limits</span>
+    </button>
 
-    <fieldset>
-      <legend>Options</legend>
-      <label class="row check">
+    <div class="meta">
+      <span class="shortcut" aria-label="Keyboard shortcut Ctrl Shift M">
+        <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>M</kbd>
+      </span>
+      <span id="status" class="status" role="status" aria-live="polite">Ready</span>
+    </div>
+
+    <section class="card">
+      <h2>Content</h2>
+
+      <label class="row">
+        <span class="row-text">
+          <strong>Comments</strong>
+          <small>Reply tree after the post</small>
+        </span>
         <input type="checkbox" id="includeComments" data-opt />
-        <span>Include comments</span>
+        <span class="switch" aria-hidden="true"></span>
       </label>
-      <label class="row check">
-        <input type="checkbox" id="includeScores" data-opt />
-        <span>Include scores</span>
-      </label>
-      <label class="row number">
-        <span>Max depth</span>
-        <input type="number" id="maxDepth" data-opt min="1" max="20" step="1" />
-      </label>
-      <label class="row number">
-        <span>Max comments</span>
-        <input type="number" id="maxComments" data-opt min="1" max="2000" step="1" />
-      </label>
-    </fieldset>
 
-    <footer>Ctrl+Shift+M · options save automatically</footer>
+      <label class="row">
+        <span class="row-text">
+          <strong>Scores</strong>
+          <small>Points next to each author</small>
+        </span>
+        <input type="checkbox" id="includeScores" data-opt />
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+
+      <div class="row static">
+        <span class="row-text">
+          <strong>Depth</strong>
+          <small>Levels of replies</small>
+        </span>
+        <div class="stepper">
+          <button type="button" class="step" data-step="-1" data-for="maxDepth" aria-label="Decrease depth">&minus;</button>
+          <input type="number" id="maxDepth" data-opt min="1" max="20" step="1" />
+          <button type="button" class="step" data-step="1" data-for="maxDepth" aria-label="Increase depth">+</button>
+        </div>
+      </div>
+
+      <div class="row static">
+        <span class="row-text">
+          <strong>Comments cap</strong>
+          <small>Maximum comments copied</small>
+        </span>
+        <div class="stepper">
+          <button type="button" class="step" data-step="-25" data-for="maxComments" aria-label="Decrease cap">&minus;</button>
+          <input type="number" id="maxComments" data-opt min="1" max="2000" step="1" />
+          <button type="button" class="step" data-step="25" data-for="maxComments" aria-label="Increase cap">+</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card all">
+      <div class="all-text">
+        <strong>Everything</strong>
+        <small>Every comment in the page, all depths, no cap. Ignores the limits above.</small>
+      </div>
+      <button id="copyAll" class="secondary" type="button">Copy everything &mdash; no limits</button>
+    </section>
+
+    <footer>Settings save automatically · v0.2.0</footer>
 
     <script src="popup.js"></script>
   </body>

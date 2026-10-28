@@ -1,5 +1,7 @@
 /* Popup: edit options (persisted in chrome.storage.sync) and trigger a copy of
-   the active tab through the content script. */
+   the active tab through the content script. Two modes:
+     - normal: honours includeComments / maxDepth / maxComments
+     - everything: ignores every limit, copies the whole comment tree in the DOM */
 
 "use strict";
 
@@ -58,15 +60,27 @@ function isRedditUrl(url) {
   return /^https:\/\/([a-z0-9-]+\.)?reddit\.com\//i.test(url || "");
 }
 
-function copyNow() {
-  setStatus("Copying…", "");
+function setBusy(busy) {
+  $("copy").disabled = busy;
+  $("copyAll").disabled = busy;
+  document.body.classList.toggle("busy", busy);
+}
+
+function copyNow(copyEverything) {
+  setStatus(copyEverything ? "Copying everything…" : "Copying…", "");
+  setBusy(true);
+
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs && tabs[0];
     if (!tab || !isRedditUrl(tab.url)) {
-      setStatus("Open a Reddit thread tab first.", "err");
+      setBusy(false);
+      setStatus("Open a Reddit thread first.", "err");
       return;
     }
-    chrome.tabs.sendMessage(tab.id, { type: "COPY_THREAD" }, (response) => {
+
+    chrome.tabs.sendMessage(tab.id, { type: "COPY_THREAD", all: copyEverything === true }, (response) => {
+      setBusy(false);
+
       if (chrome.runtime.lastError || !response) {
         setStatus("Page not ready — reload the Reddit tab, then retry.", "err");
         return;
@@ -80,7 +94,41 @@ function copyNow() {
   });
 }
 
+/* +/- steppers around the number inputs ---------------------------------- */
+
+function wireSteppers() {
+  for (const button of document.querySelectorAll(".step")) {
+    button.addEventListener("click", () => {
+      const input = $(button.dataset.for);
+      if (!input) return;
+
+      const step = parseInt(button.dataset.step, 10) || 1;
+      const min = parseInt(input.min, 10);
+      const max = parseInt(input.max, 10);
+      const current = clampInt(input.value, min, max, DEFAULTS[input.id] || min);
+      const next = Math.min(max, Math.max(min, current + step));
+
+      if (next !== current) {
+        input.value = next;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+  }
+}
+
+function wireShortcutHint() {
+  const mac = /mac/i.test(navigator.platform || "");
+  const keys = document.querySelectorAll(".shortcut kbd");
+  if (mac && keys.length === 3) {
+    keys[0].textContent = "⌘";
+    keys[1].textContent = "⇧";
+  }
+}
+
 async function init() {
+  wireShortcutHint();
+  wireSteppers();
+
   const options = await loadOptions();
   $("includeComments").checked = options.includeComments !== false;
   $("includeScores").checked = options.includeScores !== false;
@@ -90,8 +138,18 @@ async function init() {
   for (const el of document.querySelectorAll("[data-opt]")) {
     el.addEventListener("change", persist);
   }
-  $("copy").addEventListener("click", copyNow);
-  setStatus("Ready.");
+
+  $("copy").addEventListener("click", () => copyNow(false));
+  $("copyAll").addEventListener("click", () => copyNow(true));
+
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs && tabs[0];
+    if (!tab || !isRedditUrl(tab.url)) {
+      setStatus("Open a Reddit thread to copy.", "err");
+    } else {
+      setStatus("Ready.");
+    }
+  });
 }
 
 init();
