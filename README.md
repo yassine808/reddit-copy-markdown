@@ -112,7 +112,7 @@ Notable choices:
 * Comments that Reddit itself hides behind login or age gates cannot be read.
 * Extraction depends on Reddit's markup. If Reddit ships a large redesign, the
   selectors in `extract-new.js` / `extract-old.js` are the only place to update.
-* Tested on `reddit.com`, `www.reddit.com` and `old.reddit.com` thread pages.
+* Targets `reddit.com`, `www.reddit.com` and `old.reddit.com` thread pages.
 
 ## Project layout
 

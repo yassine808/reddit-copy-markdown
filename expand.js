@@ -67,6 +67,10 @@
     return out;
   }
 
+  function countComments() {
+    return document.querySelectorAll("shreddit-comment, div.thing.comment").length;
+  }
+
   function countDeepBranches() {
     const root = commentRoot();
     if (!root) return 0;
@@ -131,12 +135,21 @@
 
         if (!batch.length) {
           // Lazy batches usually appear only after reaching the end of the page.
+          // Slow networks mean "no button yet" is not the same as "done": keep
+          // scrolling while the comment count is still growing.
+          const before = countComments();
           window.scrollTo(0, document.body.scrollHeight);
-          await waitForQuiet(700, 2500);
+          await waitForQuiet(900, 4000);
+
+          const after = countComments();
+          if (after > before) {
+            idleRounds = 0;
+            continue;
+          }
 
           if (!candidates().length) {
             idleRounds += 1;
-            if (idleRounds >= 2) break;
+            if (idleRounds >= 3) break;
           } else {
             idleRounds = 0;
           }
