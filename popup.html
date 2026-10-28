@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reddit to Markdown</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Reddit <span aria-hidden="true">→</span> Markdown</h1>
+    </header>
+
+    <button id="copy" class="primary" type="button">Copy this thread</button>
+    <p id="status" class="status" role="status" aria-live="polite">Ready.</p>
+
+    <fieldset>
+      <legend>Options</legend>
+      <label class="row check">
+        <input type="checkbox" id="includeComments" data-opt />
+        <span>Include comments</span>
+      </label>
+      <label class="row check">
+        <input type="checkbox" id="includeScores" data-opt />
+        <span>Include scores</span>
+      </label>
+      <label class="row number">
+        <span>Max depth</span>
+        <input type="number" id="maxDepth" data-opt min="1" max="20" step="1" />
+      </label>
+      <label class="row number">
+        <span>Max comments</span>
+        <input type="number" id="maxComments" data-opt min="1" max="2000" step="1" />
+      </label>
+    </fieldset>
+
+    <footer>Ctrl+Shift+M · options save automatically</footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

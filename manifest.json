@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "Reddit to Markdown",
+  "version": "0.1.0",
+  "description": "Copy the current Reddit thread (post + comment tree) to the clipboard as clean Markdown.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "clipboardWrite",
+    "storage",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "https://*.reddit.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Copy thread as Markdown",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "commands": {
+    "copy-thread": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+M",
+        "mac": "Command+Shift+M"
+      },
+      "description": "Copy the current Reddit thread as Markdown"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.reddit.com/*",
+        "https://old.reddit.com/*"
+      ],
+      "js": [
+        "vendor/turndown.js",
+        "vendor/turndown-plugin-gfm.js",
+        "extract-old.js",
+        "extract-new.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
